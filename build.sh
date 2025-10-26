@@ -10,4 +10,4 @@ pip install -r requirements.txt
 
 #Run the Flask command to create the database tables
 
-flask create-db
+flask init-db
