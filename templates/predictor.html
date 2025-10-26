@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulseAI - Heart Disease Diagnosis Predictor</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#3b82f6', // blue-500
+                        secondary: '#60a5fa', // blue-400
+                        accent: '#22c55e', // green-500
+                        danger: '#ef4444', // red-500
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        /* Custom styles for radio buttons */
+        input[type="radio"].form-radio {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            display: inline-block;
+            vertical-align: middle;
+            background-origin: border-box;
+            background-color: #fff;
+            border: 1px solid #d1d5db; /* gray-300 */
+            border-radius: 50%;
+            width: 1.25em; /* 20px */
+            height: 1.25em; /* 20px */
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+
+        input[type="radio"].form-radio:checked {
+            border-color: transparent;
+            background-color: var(--tw-bg-primary); /* Use primary color from tailwind.config */
+            background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3ccircle cx='8' cy='8' r='3'/%3e%3c/svg%3e");
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        input[type="radio"].form-radio:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5); /* ring-primary with opacity */
+        }
+        .form-radio.text-blue-600:checked {
+            --tw-bg-primary: #2563eb; /* blue-600 for checked state, matches tailwind config */
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-indigo-200 min-h-screen font-sans">
+    
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex-shrink-0 flex items-center">
+                    <h1 class="text-3xl font-extrabold text-primary">PulseAI</h1>
+                </div>
+                <div class="flex items-center">
+                    {% if current_user.is_authenticated %}
+                        <span class="text-gray-700 mr-4 text-lg hidden sm:inline">Welcome, <strong class="font-semibold text-primary">{{ current_user.username }}</strong>!</span>
+                        <a href="{{ url_for('logout') }}" 
+                           class="py-2 px-5 border border-transparent rounded-lg shadow-sm text-base font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-200">
+                           Logout
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div class="max-w-6xl mx-auto p-4 md:p-6 mt-8">
+        
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="mb-6 space-y-3">
+                    {% for category, message in messages %}
+                        <div class="{% if category == 'danger' %} bg-red-100 border-red-400 text-red-700 
+                                 {% elif category == 'success' %} bg-green-100 border-green-400 text-green-700 
+                                 {% elif category == 'warning' %} bg-yellow-100 border-yellow-400 text-yellow-700 
+                                 {% else %} bg-blue-100 border-blue-400 text-blue-700 {% endif %} 
+                                 border-l-4 p-4 rounded-lg shadow-sm" role="alert">
+                            <p class="font-medium">{{ message }}</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Prediction Result Box -->
+        {% if prediction_text %}
+            <div class="bg-white p-6 md:p-8 rounded-xl shadow-lg mb-8 text-center border-l-8 {% if prediction_class == 'text-red-600' %}border-red-500{% else %}border-green-500{% endif %}">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">Prediction Result:</h2>
+                <p class="text-3xl font-extrabold {{ prediction_class }}">{{ prediction_text }}</p>
+                <a href="{{ url_for('predictor') }}" class="mt-6 inline-block bg-primary text-white py-2 px-6 rounded-lg font-semibold hover:bg-blue-700 transition duration-200 shadow">
+                    Predict Again
+                </a>
+            </div>
+        {% endif %}
+
+        <!-- Main Form Card -->
+        <div class="bg-white p-8 md:p-10 rounded-xl shadow-2xl border border-gray-200">
+            <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">Enter Patient Details</h2>
+            
+            <form action="/predict" method="post" class="space-y-10">
+                
+                <!-- Section 1: Basic Information -->
+                <fieldset>
+                    <legend class="text-xl font-semibold text-gray-700 border-b border-gray-300 pb-3 mb-6 w-full">Basic Information</legend>
+                    <div class="space-y-6 max-w-xl mx-auto">
+                        
+                        <div>
+                            <label for="age" class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Age
+                            </label>
+                            <input type="number" id="age" name="Age" required
+                                   class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200">
+                        </div>
+
+                        <div>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Sex
+                            </label>
+                            <div class="mt-2 flex space-x-6 items-center h-10 pl-5">
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Sex" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Male</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Sex" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Female</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+
+                <!-- Section 2: Vitals & Symptoms -->
+                <fieldset>
+                    <legend class="text-xl font-semibold text-gray-700 border-b border-gray-300 pb-3 mb-6 w-full">Vitals & Symptoms</legend>
+                    <div class="space-y-6 max-w-xl mx-auto">
+                        
+                        <div>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Chest Pain Type
+                            </label>
+                            <div class="mt-2 space-y-2 pl-5">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Chest Pain Type" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Typical Angina</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Chest Pain Type" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Atypical Angina</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Chest Pain Type" value="2" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Non-Anginal Pain</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Chest Pain Type" value="3" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Asymptomatic</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="rbp" class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Resting Blood Pressure (mm Hg)
+                            </label>
+                            <input type="number" id="rbp" name="Resting Blood Pressure" required
+                                   class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200">
+                        </div>
+
+                        <div>
+                            <label for="chol" class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Serum Cholestoral (mg/dL)
+                            </label>
+                            <input type="number" id="chol" name="Serum Cholestoral (mg/dL)" required
+                                   class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200">
+                        </div>
+
+                        <div>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Fasting Blood Sugar > 120 mg/dL
+                            </label>
+                            <div class="mt-2 flex space-x-6 items-center h-10 pl-5">
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Fasting Blood Sugar" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Yes</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Fasting Blood Sugar" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">No</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+                
+                <!-- Section 3: Test Results -->
+                <fieldset>
+                    <legend class="text-xl font-semibold text-gray-700 border-b border-gray-300 pb-3 mb-6 w-full">Clinical & Test Results</legend>
+                    <div class="space-y-6 max-w-xl mx-auto">
+
+                        <div>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Resting ECG
+                            </label>
+                            <div class="mt-2 space-y-2 pl-5">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Resting ECG" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Normal</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Resting ECG" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">ST-T wave abnormality</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Resting ECG" value="2" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Left ventricular hypertrophy</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="maxhr" class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Maximum Heart Rate Achieved
+                            </label>
+                            <input type="number" id="maxhr" name="Maximum Heart Rate Achieved" required
+                                   class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200">
+                        </div>
+
+                        <div>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Exercise Induced Angina
+                            </label>
+                            <div class="mt-2 flex space-x-6 items-center h-10 pl-5">
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Exercise Induced Angina" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Yes</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Exercise Induced Angina" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">No</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="oldpeak" class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                ST Depression (Oldpeak)
+                            </label>
+                            <input type="number" step="0.1" id="oldpeak" name="ST Depression Induced By Exercise Relative To Rest" required
+                                   class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200"
+                                   placeholder="e.g., 1.5">
+                        </div>
+
+                        <div>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Slope of Peak Exercise ST Segment
+                            </label>
+                            <div class="mt-2 space-y-2 pl-5">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Slope Of The Peak Exercise ST Segment" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Up Sloping</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Slope Of The Peak Exercise ST Segment" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Flat</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Slope Of The Peak Exercise ST Segment" value="2" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Down Sloping</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Number Of Major Vessels (0-4)
+                            </label>
+                            <div class="mt-2 flex flex-wrap gap-x-6 gap-y-2 pl-5">
+                                {% for i in range(5) %}
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Number Of Major Vessels Colored By Flourosopy" value="{{ i }}" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">{{ i }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Thal
+                            </label>
+                            <div class="mt-2 space-y-2 pl-5">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Thal" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Normal</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Thal" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Fixed Defect</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Thal" value="2" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Reversible Defect</span>
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                </fieldset>
+
+                <!-- Submit Button -->
+                <div class="mt-10 text-center">
+                    <button type="submit" 
+                           class="w-full md:w-auto py-3 px-10 border border-transparent rounded-lg shadow-lg text-xl font-bold text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer transition duration-200 transform hover:scale-105">
+                        Get Prediction
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+
