@@ -44,7 +44,7 @@
 
         input[type="radio"].form-radio:checked {
             border-color: transparent;
-            background-color: #3b82f6;  /* Tailwind blue-500 */
+            background-color: var(--tw-bg-primary); 
             background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3ccircle cx='8' cy='8' r='3'/%3e%3c/svg%3e");
             background-size: 100% 100%;
             background-position: center;
@@ -119,55 +119,120 @@
             <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">Enter Patient Details</h2>
             
             <form action="/predict" method="post" class="space-y-10">
-                <!-- FORM CONTENT SAME AS BEFORE - Shortened for brevity, keep your full form here -->
-                <!-- Please paste the full form code from the previous step here if re-copying -->
-                 <fieldset>
+                
+                <!-- Section 1: Basic Information -->
+                <fieldset>
                     <legend class="text-xl font-semibold text-gray-700 border-b border-gray-300 pb-3 mb-6 w-full">Basic Information</legend>
                     <div class="space-y-6 max-w-xl mx-auto">
+                        
+                        <!-- Age -->
                         <div>
-                            <label for="age" class="flex items-center text-sm font-semibold text-gray-700 mb-2">Age</label>
-                            <input type="number" id="age" name="Age" required class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                            <label for="age" class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Age
+                            </label>
+                            <input type="number" id="age" name="Age" required
+                                   class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200">
                         </div>
+
+                        <!-- Sex -->
                         <div>
-                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">Sex</label>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Sex
+                            </label>
                             <div class="mt-2 flex space-x-6 items-center h-10 pl-5">
-                                <label class="inline-flex items-center cursor-pointer"><input type="radio" name="Sex" value="1" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700">Male</span></label>
-                                <label class="inline-flex items-center cursor-pointer"><input type="radio" name="Sex" value="0" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700">Female</span></label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Sex" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Male</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Sex" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Female</span>
+                                </label>
                             </div>
                         </div>
                     </div>
                 </fieldset>
 
-                 <!-- Section 2: Vitals & Symptoms -->
+                <!-- Section 2: Vitals & Symptoms -->
                 <fieldset>
                     <legend class="text-xl font-semibold text-gray-700 border-b border-gray-300 pb-3 mb-6 w-full">Vitals & Symptoms</legend>
                     <div class="space-y-6 max-w-xl mx-auto">
                         
+                        <!-- Chest Pain -->
                         <div>
-                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">Chest Pain Type</label>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Chest Pain Type
+                            </label>
                             <div class="mt-2 space-y-2 pl-5">
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="Chest Pain Type" value="0" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Typical Angina</span></label>
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="Chest Pain Type" value="1" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Atypical Angina</span></label>
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="Chest Pain Type" value="2" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Non-Anginal Pain</span></label>
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="Chest Pain Type" value="3" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Asymptomatic</span></label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Chest Pain Type" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Typical Angina</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Chest Pain Type" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Atypical Angina</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Chest Pain Type" value="2" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Non-Anginal Pain</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Chest Pain Type" value="3" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Asymptomatic</span>
+                                </label>
                             </div>
                         </div>
 
+                        <!-- RBP -->
                         <div>
-                            <label for="rbp" class="flex items-center text-sm font-semibold text-gray-700 mb-2">Resting Blood Pressure (mm Hg)</label>
-                            <input type="number" id="rbp" name="Resting Blood Pressure" required class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                            <label for="rbp" class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Resting Blood Pressure (mm Hg)
+                            </label>
+                            <input type="number" id="rbp" name="Resting Blood Pressure" required
+                                   class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200">
                         </div>
 
+                        <!-- Cholesterol -->
                         <div>
-                            <label for="chol" class="flex items-center text-sm font-semibold text-gray-700 mb-2">Serum Cholestoral (mg/dL)</label>
-                            <input type="number" id="chol" name="Serum Cholestoral (mg/dL)" required class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                            <label for="chol" class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Serum Cholestoral (mg/dL)
+                            </label>
+                            <input type="number" id="chol" name="Serum Cholestoral (mg/dL)" required
+                                   class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200">
                         </div>
 
+                        <!-- Fasting Blood Sugar -->
                         <div>
-                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">Fasting Blood Sugar > 120 mg/dL</label>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Fasting Blood Sugar > 120 mg/dL
+                            </label>
                             <div class="mt-2 flex space-x-6 items-center h-10 pl-5">
-                                <label class="inline-flex items-center cursor-pointer"><input type="radio" name="Fasting Blood Sugar" value="1" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Yes</span></label>
-                                <label class="inline-flex items-center cursor-pointer"><input type="radio" name="Fasting Blood Sugar" value="0" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">No</span></label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Fasting Blood Sugar" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Yes</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Fasting Blood Sugar" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">No</span>
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -177,53 +242,142 @@
                 <fieldset>
                     <legend class="text-xl font-semibold text-gray-700 border-b border-gray-300 pb-3 mb-6 w-full">Clinical & Test Results</legend>
                     <div class="space-y-6 max-w-xl mx-auto">
+
+                        <!-- Resting ECG -->
                         <div>
-                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">Resting ECG</label>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Resting ECG
+                            </label>
                             <div class="mt-2 space-y-2 pl-5">
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="Resting ECG" value="0" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Normal</span></label>
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="Resting ECG" value="1" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">ST-T wave abnormality</span></label>
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="Resting ECG" value="2" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Left ventricular hypertrophy</span></label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Resting ECG" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Normal</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Resting ECG" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">ST-T wave abnormality</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Resting ECG" value="2" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Left ventricular hypertrophy</span>
+                                </label>
                             </div>
                         </div>
+                        
+                        <!-- Max HR -->
                         <div>
-                            <label for="maxhr" class="flex items-center text-sm font-semibold text-gray-700 mb-2">Maximum Heart Rate Achieved</label>
-                            <input type="number" id="maxhr" name="Maximum Heart Rate Achieved" required class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                            <label for="maxhr" class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Maximum Heart Rate Achieved
+                            </label>
+                            <input type="number" id="maxhr" name="Maximum Heart Rate Achieved" required
+                                   class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200">
                         </div>
+
+                        <!-- Exercise Angina -->
                         <div>
-                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">Exercise Induced Angina</label>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Exercise Induced Angina
+                            </label>
                             <div class="mt-2 flex space-x-6 items-center h-10 pl-5">
-                                <label class="inline-flex items-center cursor-pointer"><input type="radio" name="Exercise Induced Angina" value="1" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Yes</span></label>
-                                <label class="inline-flex items-center cursor-pointer"><input type="radio" name="Exercise Induced Angina" value="0" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">No</span></label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Exercise Induced Angina" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Yes</span>
+                                </label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Exercise Induced Angina" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">No</span>
+                                </label>
                             </div>
                         </div>
+
+                        <!-- Oldpeak -->
                         <div>
-                            <label for="oldpeak" class="flex items-center text-sm font-semibold text-gray-700 mb-2">ST Depression (Oldpeak)</label>
-                            <input type="number" step="0.1" id="oldpeak" name="ST Depression Induced By Exercise Relative To Rest" required class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                            <label for="oldpeak" class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                ST Depression (Oldpeak)
+                            </label>
+                            <input type="number" step="0.1" id="oldpeak" name="ST Depression Induced By Exercise Relative To Rest" required
+                                   class="mt-1 block w-full px-4 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition duration-200"
+                                   placeholder="e.g., 1.5">
                         </div>
+
+                        <!-- Slope -->
                         <div>
-                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">Slope of Peak Exercise ST Segment</label>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Slope of Peak Exercise ST Segment
+                            </label>
                             <div class="mt-2 space-y-2 pl-5">
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="Slope Of The Peak Exercise ST Segment" value="0" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Up Sloping</span></label>
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="Slope Of The Peak Exercise ST Segment" value="1" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Flat</span></label>
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="Slope Of The Peak Exercise ST Segment" value="2" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Down Sloping</span></label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Slope Of The Peak Exercise ST Segment" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Up Sloping</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Slope Of The Peak Exercise ST Segment" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Flat</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Slope Of The Peak Exercise ST Segment" value="2" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Down Sloping</span>
+                                </label>
                             </div>
                         </div>
+
+                        <!-- Major Vessels -->
                         <div>
-                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">Number Of Major Vessels (0-4)</label>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Number Of Major Vessels (0-4)
+                            </label>
                             <div class="mt-2 flex flex-wrap gap-x-6 gap-y-2 pl-5">
                                 {% for i in range(5) %}
-                                <label class="inline-flex items-center cursor-pointer"><input type="radio" name="Number Of Major Vessels Colored By Flourosopy" value="{{ i }}" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">{{ i }}</span></label>
+                                <label class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" name="Number Of Major Vessels Colored By Flourosopy" value="{{ i }}" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">{{ i }}</span>
+                                </label>
                                 {% endfor %}
                             </div>
                         </div>
+
+                        <!-- Thal -->
                         <div>
-                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">Thal</label>
+                            <label class="flex items-center text-sm font-semibold text-gray-700 mb-2">
+                                <span class="flex h-2 w-2 mr-3">
+                                    <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                                </span>
+                                Thal
+                            </label>
                             <div class="mt-2 space-y-2 pl-5">
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="Thal" value="0" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Normal</span></label>
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="Thal" value="1" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Fixed Defect</span></label>
-                                <label class="flex items-center cursor-pointer"><input type="radio" name="Thal" value="2" required class="form-radio text-blue-600"><span class="ml-2 text-gray-700 font-medium">Reversible Defect</span></label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Thal" value="0" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Normal</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Thal" value="1" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Fixed Defect</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="Thal" value="2" required class="form-radio text-blue-600">
+                                    <span class="ml-2 text-gray-700 font-medium">Reversible Defect</span>
+                                </label>
                             </div>
                         </div>
+
                     </div>
                 </fieldset>
 
@@ -361,4 +515,3 @@
     </script>
 </body>
 </html>
-
