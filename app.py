@@ -1,5 +1,5 @@
 from flask import (
-    Flask, request, render_template, redirect, url_for, flash
+    Flask, request, render_template, redirect, url_for, flash, jsonify
 )
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
@@ -9,49 +9,105 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import numpy as np
 import pickle
 import os
+import google.generativeai as genai
 
-# --- Load Models with Error Handling ---
-# We use try/except to give a clear error if the files are missing.
+# --- Load Models ---
 try:
     with open('lr.pkl', 'rb') as file:
         lr = pickle.load(file)
-except FileNotFoundError:
-    print("\n[ERROR] 'lr.pkl' file not found.")
-    print("Make sure 'lr.pkl' is in the same directory as 'app.py'\n")
-    lr = None
-except Exception as e:
-    print(f"\n[ERROR] Could not load 'lr.pkl': {e}\n")
-    lr = None
-
-try:
     with open('sc.pkl', 'rb') as scaler_file:
         sc = pickle.load(scaler_file)
-except FileNotFoundError:
-    print("\n[ERROR] 'sc.pkl' file not found.")
-    print("Make sure 'sc.pkl' is in the same directory as 'app.py'\n")
-    sc = None
 except Exception as e:
-    print(f"\n[ERROR] Could not load 'sc.pkl': {e}\n")
+    print(f"\n[ERROR] Could not load models: {e}\n")
+    lr = None
     sc = None
 
 # --- App Initialization ---
 app = Flask(__name__)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_secret_key')
 
-# --- Configuration (Local SQLite) ---
-# Secret key for session management
-app.config['SECRET_KEY'] = 'a_very_secret_key_for_local_testing'
+# --- Database Config ---
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    if database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'users.db')
 
-# Database configuration for local SQLite
-basedir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'users.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# --- Database & Login Manager Setup ---
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.login_view = 'login' # Redirect to login page if user is not logged in
-login_manager.login_message_category = 'warning' # Flash message category
+login_manager.login_view = 'login'
+
+# --- Gemini AI Configuration (Improved Self-Healing) ---
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+model = None 
+
+if GEMINI_API_KEY:
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        
+        # 1. Ask Google what models are available for this API Key
+        print("--- Checking available AI models ---")
+        available_models = []
+        try:
+            for m in genai.list_models():
+                if 'generateContent' in m.supported_generation_methods:
+                    available_models.append(m.name)
+        except Exception as e:
+            print(f"Warning: Could not list models ({e}). Defaulting to hardcoded preferences.")
+
+        print(f"Available Models found: {available_models}")
+
+        # 2. Select the best available model
+        chosen_model_name = None
+        
+        # Priority list - favoring Flash (fast/cheap) and stable versions
+        # We use substrings to match specific versions (e.g. 'gemini-1.5-flash-001')
+        priority_substrings = [
+            'gemini-1.5-flash', 
+            'gemini-1.5-pro',
+            'gemini-1.0-pro',
+            'gemini-pro'
+        ]
+        
+        # First pass: Look for priority models
+        for priority in priority_substrings:
+            for model_name in available_models:
+                if priority in model_name and 'exp' not in model_name:
+                    chosen_model_name = model_name
+                    break
+            if chosen_model_name:
+                break
+        
+        # Fallback 1: If no priority model found, take the first non-experimental one
+        if not chosen_model_name:
+            for model_name in available_models:
+                if 'exp' not in model_name and 'vision' not in model_name: 
+                    chosen_model_name = model_name
+                    break
+
+        # Fallback 2: If we still have nothing (or list failed), force a safe default
+        if not chosen_model_name:
+            chosen_model_name = 'models/gemini-1.5-flash'
+
+        print(f"SUCCESS: Using AI Model -> {chosen_model_name}")
+        
+        generation_config = {
+            "temperature": 0.7,
+            "top_p": 0.95,
+            "top_k": 40,
+            "max_output_tokens": 1024,
+        }
+        model = genai.GenerativeModel(model_name=chosen_model_name, 
+                                      generation_config=generation_config)
+
+    except Exception as e:
+        print(f"Error configuring Gemini: {e}")
 
 # --- User Model ---
 class User(UserMixin, db.Model):
@@ -69,11 +125,8 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- Database Initializer Command ---
-# This function will create the database tables
 @app.cli.command('init-db')
 def init_db_command():
-    """Creates the database tables."""
     with app.app_context():
         db.create_all()
     print('Initialized the database.')
@@ -85,120 +138,107 @@ def init_db_command():
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('predictor'))
-    
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
-
         if user and user.check_password(password):
             login_user(user)
             flash('Logged in successfully!', 'success')
             return redirect(url_for('predictor'))
         else:
             flash('Invalid username or password.', 'danger')
-            
     return render_template('index.html')
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('predictor'))
-
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        
-        # Check if user already exists
         existing_user = User.query.filter_by(username=username).first()
         if existing_user:
-            flash('Username already exists. Please choose a different one.', 'warning')
+            flash('Username exists.', 'warning')
             return render_template('register.html')
-
-        # Create new user
         new_user = User(username=username)
         new_user.set_password(password)
-        
-        try:
-            db.session.add(new_user)
-            db.session.commit()
-            flash('Registration successful! Please login.', 'success')
-            return redirect(url_for('login'))
-        except Exception as e:
-            db.session.rollback()
-            flash(f'An error occurred: {e}', 'danger')
-
+        db.session.add(new_user)
+        db.session.commit()
+        flash('Registration successful!', 'success')
+        return redirect(url_for('login'))
     return render_template('register.html')
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
-    flash('You have been logged out.', 'success')
+    flash('Logged out.', 'success')
     return redirect(url_for('login'))
 
 @app.route('/predictor')
 @login_required
 def predictor():
-    """Renders the predictor page."""
     return render_template('predictor.html', prediction_text="")
 
 @app.route('/predict', methods=['POST'])
 @login_required
 def predict():
-    """Handles the prediction logic from the form."""
-    
-    # Check if models loaded correctly
     if not lr or not sc:
-        flash('Prediction models are not loaded. Please check server logs.', 'danger')
+        flash('Models not loaded.', 'danger')
         return render_template('predictor.html', prediction_text="")
-
     try:
-        # Get all values from the form
         input_data = [float(x) for x in request.form.values()]
-        
-        # Check if we have the correct number of features
         if len(input_data) != 13:
-            flash(f'Error: Expected 13 features, but received {len(input_data)}.', 'danger')
+            flash(f'Error: Expected 13 features, got {len(input_data)}.', 'danger')
             return render_template('predictor.html', prediction_text="")
 
         input_data_as_numpy_array = np.asarray(input_data)
         input_data_reshaped = input_data_as_numpy_array.reshape(1, -1)
-        
-        # Standardize the data
         std_data = sc.transform(input_data_reshaped)
-        
-        # Make prediction
         prediction = lr.predict(std_data)
         
-        # Format the result
-        result_text = ''
-        result_class = ''
         if prediction[0] == 1:
-            result_text = 'Patient Diagnosed With Heart Disease'
-            result_class = 'text-red-600'
+            result = 'Patient Diagnosed With Heart Disease'
+            cls = 'text-red-600'
         else:
-            result_text = 'CONGRATULATIONS! Patient Not Diagnosed With Heart Disease'
-            result_class = 'text-green-600'
-            
-        return render_template('predictor.html', prediction_text=result_text, prediction_class=result_class)
-    
-    except ValueError:
-        flash('Invalid data submitted. Please check all fields.', 'danger')
-        return render_template('predictor.html', prediction_text="")
+            result = 'CONGRATULATIONS! Patient Not Diagnosed With Heart Disease'
+            cls = 'text-green-600'
+        return render_template('predictor.html', prediction_text=result, prediction_class=cls)
     except Exception as e:
-        # Catch other potential errors (e.g., shape mismatch in sc.transform)
-        print(f"\n[ERROR] in /predict route: {e}\n")
-        flash(f'An error occurred during prediction: {e}', 'danger')
+        flash(f'Error: {e}', 'danger')
         return render_template('predictor.html', prediction_text="")
+
+# --- Chatbot API Route ---
+@app.route('/chat', methods=['POST'])
+@login_required
+def chat():
+    if not GEMINI_API_KEY:
+        return jsonify({'response': "AI System is currently offline (API Key missing)."})
+    
+    if not model:
+        return jsonify({'response': "AI Model initialization failed. Check server logs for details."})
+
+    user_message = request.json.get('message')
+    
+    # Context prompt
+    prompt_with_context = f"""
+    You are PulseAI Assistant, a specialized medical AI focused ONLY on heart health.
+    If the user asks about heart health, diet, or medical terms, answer helpfully.
+    If the user asks about ANYTHING else, politely REFUSE.
+    
+    User Query: {user_message}
+    """
+    
+    try:
+        response = model.generate_content(prompt_with_context)
+        return jsonify({'response': response.text})
+    except Exception as e:
+        print(f"Gemini Error: {e}")
+        return jsonify({'response': f"I'm having trouble thinking right now. Error details: {str(e)}"})
 
 # --- Main execution ---
 if __name__ == "__main__":
-    # --- Create tables ---
-    # This block runs ONLY when you execute `python app.py`
-    # It ensures the database tables exist, fixing the "no such table" error
-    # for this specific run method.
     with app.app_context():
         db.create_all()
-    
     app.run(debug=True)
