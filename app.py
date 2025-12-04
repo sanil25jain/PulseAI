@@ -43,31 +43,38 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# --- Gemini AI Configuration (Improved Self-Healing) ---
+# --- Gemini AI Configuration (Lazy Loading) ---
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-model = None 
+_model = None 
 
-if GEMINI_API_KEY:
+def get_ai_model():
+    """
+    Initializes and returns the Gemini model.
+    This runs ONLY when the first chat request comes in, preventing server timeout during startup.
+    """
+    global _model
+    if _model:
+        return _model
+        
+    if not GEMINI_API_KEY:
+        print("Error: No GEMINI_API_KEY found.")
+        return None
+
     try:
         genai.configure(api_key=GEMINI_API_KEY)
         
-        # 1. Ask Google what models are available for this API Key
-        print("--- Checking available AI models ---")
+        # 1. Ask Google what models are available
+        print("--- Checking available AI models (Lazy Load) ---")
         available_models = []
         try:
             for m in genai.list_models():
                 if 'generateContent' in m.supported_generation_methods:
                     available_models.append(m.name)
         except Exception as e:
-            print(f"Warning: Could not list models ({e}). Defaulting to hardcoded preferences.")
-
-        print(f"Available Models found: {available_models}")
+            print(f"Warning: Could not list models ({e}).")
 
         # 2. Select the best available model
         chosen_model_name = None
-        
-        # Priority list - favoring Flash (fast/cheap) and stable versions
-        # We use substrings to match specific versions (e.g. 'gemini-1.5-flash-001')
         priority_substrings = [
             'gemini-1.5-flash', 
             'gemini-1.5-pro',
@@ -75,7 +82,6 @@ if GEMINI_API_KEY:
             'gemini-pro'
         ]
         
-        # First pass: Look for priority models
         for priority in priority_substrings:
             for model_name in available_models:
                 if priority in model_name and 'exp' not in model_name:
@@ -84,18 +90,18 @@ if GEMINI_API_KEY:
             if chosen_model_name:
                 break
         
-        # Fallback 1: If no priority model found, take the first non-experimental one
         if not chosen_model_name:
+            # Fallback 1: First non-experimental
             for model_name in available_models:
                 if 'exp' not in model_name and 'vision' not in model_name: 
                     chosen_model_name = model_name
                     break
-
-        # Fallback 2: If we still have nothing (or list failed), force a safe default
+        
         if not chosen_model_name:
+            # Fallback 2: Hard default
             chosen_model_name = 'models/gemini-1.5-flash'
 
-        print(f"SUCCESS: Using AI Model -> {chosen_model_name}")
+        print(f"SUCCESS: Initialized AI Model -> {chosen_model_name}")
         
         generation_config = {
             "temperature": 0.7,
@@ -103,11 +109,13 @@ if GEMINI_API_KEY:
             "top_k": 40,
             "max_output_tokens": 1024,
         }
-        model = genai.GenerativeModel(model_name=chosen_model_name, 
+        _model = genai.GenerativeModel(model_name=chosen_model_name, 
                                       generation_config=generation_config)
+        return _model
 
     except Exception as e:
         print(f"Error configuring Gemini: {e}")
+        return None
 
 # --- User Model ---
 class User(UserMixin, db.Model):
@@ -215,6 +223,9 @@ def predict():
 def chat():
     if not GEMINI_API_KEY:
         return jsonify({'response': "AI System is currently offline (API Key missing)."})
+    
+    # LAZY LOAD: We initialize the model here, the first time someone chats
+    model = get_ai_model()
     
     if not model:
         return jsonify({'response': "AI Model initialization failed. Check server logs for details."})
