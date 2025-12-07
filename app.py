@@ -9,7 +9,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import numpy as np
 import pickle
 import os
-import google.generativeai as genai
+import time
+from groq import Groq # Import the Groq library
 
 # --- Load Models ---
 try:
@@ -43,78 +44,35 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# --- Gemini AI Configuration (Lazy Loading) ---
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-_model = None 
+# --- Groq AI Configuration ---
+# You need a GROQ_API_KEY instead of GEMINI_API_KEY now.
+# Get one for free at https://console.groq.com/keys
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 
-def get_ai_model():
+# --- Debug: Print Key Status on Startup ---
+if GROQ_API_KEY:
+    print(f"DEBUG: Groq API Key found. Starts with: {GROQ_API_KEY[:4]}... (Length: {len(GROQ_API_KEY)})")
+else:
+    print("DEBUG: No GROQ_API_KEY found in environment variables.")
+
+groq_client = None
+
+def get_groq_client():
     """
-    Initializes and returns the Gemini model.
-    This runs ONLY when the first chat request comes in, preventing server timeout during startup.
+    Initializes the Groq client.
     """
-    global _model
-    if _model:
-        return _model
+    global groq_client
+    if groq_client:
+        return groq_client
         
-    if not GEMINI_API_KEY:
-        print("Error: No GEMINI_API_KEY found.")
+    if not GROQ_API_KEY:
         return None
 
     try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        
-        # 1. Ask Google what models are available
-        print("--- Checking available AI models (Lazy Load) ---")
-        available_models = []
-        try:
-            for m in genai.list_models():
-                if 'generateContent' in m.supported_generation_methods:
-                    available_models.append(m.name)
-        except Exception as e:
-            print(f"Warning: Could not list models ({e}).")
-
-        # 2. Select the best available model
-        chosen_model_name = None
-        priority_substrings = [
-            'gemini-1.5-flash', 
-            'gemini-1.5-pro',
-            'gemini-1.0-pro',
-            'gemini-pro'
-        ]
-        
-        for priority in priority_substrings:
-            for model_name in available_models:
-                if priority in model_name and 'exp' not in model_name:
-                    chosen_model_name = model_name
-                    break
-            if chosen_model_name:
-                break
-        
-        if not chosen_model_name:
-            # Fallback 1: First non-experimental
-            for model_name in available_models:
-                if 'exp' not in model_name and 'vision' not in model_name: 
-                    chosen_model_name = model_name
-                    break
-        
-        if not chosen_model_name:
-            # Fallback 2: Hard default
-            chosen_model_name = 'models/gemini-1.5-flash'
-
-        print(f"SUCCESS: Initialized AI Model -> {chosen_model_name}")
-        
-        generation_config = {
-            "temperature": 0.7,
-            "top_p": 0.95,
-            "top_k": 40,
-            "max_output_tokens": 1024,
-        }
-        _model = genai.GenerativeModel(model_name=chosen_model_name, 
-                                      generation_config=generation_config)
-        return _model
-
+        groq_client = Groq(api_key=GROQ_API_KEY)
+        return groq_client
     except Exception as e:
-        print(f"Error configuring Gemini: {e}")
+        print(f"Error configuring Groq: {e}")
         return None
 
 # --- User Model ---
@@ -197,11 +155,17 @@ def predict():
         return render_template('predictor.html', prediction_text="")
     try:
         input_data = [float(x) for x in request.form.values()]
-        if len(input_data) != 13:
-            flash(f'Error: Expected 13 features, got {len(input_data)}.', 'danger')
+        # We only take the first 13 inputs in case extra data was sent
+        if len(input_data) < 13: 
+             pass 
+
+        clinical_features = input_data[:13]
+        
+        if len(clinical_features) != 13:
+            flash(f'Error: Expected 13 features, got {len(clinical_features)}.', 'danger')
             return render_template('predictor.html', prediction_text="")
 
-        input_data_as_numpy_array = np.asarray(input_data)
+        input_data_as_numpy_array = np.asarray(clinical_features)
         input_data_reshaped = input_data_as_numpy_array.reshape(1, -1)
         std_data = sc.transform(input_data_reshaped)
         prediction = lr.predict(std_data)
@@ -217,36 +181,48 @@ def predict():
         flash(f'Error: {e}', 'danger')
         return render_template('predictor.html', prediction_text="")
 
-# --- Chatbot API Route ---
+# --- Chatbot API Route (GROQ VERSION) ---
 @app.route('/chat', methods=['POST'])
 @login_required
 def chat():
-    if not GEMINI_API_KEY:
-        return jsonify({'response': "AI System is currently offline (API Key missing)."})
+    client = get_groq_client()
     
-    # LAZY LOAD: We initialize the model here, the first time someone chats
-    model = get_ai_model()
-    
-    if not model:
-        return jsonify({'response': "AI Model initialization failed. Check server logs for details."})
+    if not client:
+        # Check if they forgot to set the new key
+        return jsonify({'response': "System offline: GROQ_API_KEY is missing."})
 
     user_message = request.json.get('message')
     
-    # Context prompt
-    prompt_with_context = f"""
-    You are PulseAI Assistant, a specialized medical AI focused ONLY on heart health.
-    If the user asks about heart health, diet, or medical terms, answer helpfully.
-    If the user asks about ANYTHING else, politely REFUSE.
-    
-    User Query: {user_message}
+    # System Instruction for context
+    system_prompt = """
+    You are PulseAI Assistant, a medical AI focused ONLY on heart health.
+    1. Answer questions about heart disease, diet, exercise, and medical terms helpfully.
+    2. Politely REFUSE to answer questions about unrelated topics (sports, coding, politics, etc.).
+    3. Keep answers concise (max 3-4 sentences).
     """
     
     try:
-        response = model.generate_content(prompt_with_context)
-        return jsonify({'response': response.text})
+        # Create completion with Llama 3.3 (Updated Model)
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            model="llama-3.3-70b-versatile", # UPDATED: The previous model was decommissioned
+            temperature=0.5,
+            max_tokens=300,
+        )
+        
+        # Extract response
+        ai_response = chat_completion.choices[0].message.content
+        return jsonify({'response': ai_response})
+        
     except Exception as e:
-        print(f"Gemini Error: {e}")
-        return jsonify({'response': f"I'm having trouble thinking right now. Error details: {str(e)}"})
+        print(f"Groq Error: {e}")
+        error_str = str(e)
+        if "401" in error_str:
+             return jsonify({'response': "Error: Invalid API Key. Please check your GROQ_API_KEY setting."})
+        return jsonify({'response': f"I'm having trouble connecting. Error: {str(e)}"})
 
 # --- Main execution ---
 if __name__ == "__main__":
