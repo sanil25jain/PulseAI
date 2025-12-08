@@ -10,9 +10,8 @@ import numpy as np
 import pickle
 import os
 import time
-from groq import Groq # Import the Groq library
+from groq import Groq 
 
-# --- Load Models ---
 try:
     with open('lr.pkl', 'rb') as file:
         lr = pickle.load(file)
@@ -23,11 +22,9 @@ except Exception as e:
     lr = None
     sc = None
 
-# --- App Initialization ---
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default_secret_key')
 
-# --- Database Config ---
 database_url = os.environ.get('DATABASE_URL')
 if database_url:
     if database_url.startswith("postgresql://"):
@@ -44,12 +41,8 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# --- Groq AI Configuration ---
-# You need a GROQ_API_KEY instead of GEMINI_API_KEY now.
-# Get one for free at https://console.groq.com/keys
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 
-# --- Debug: Print Key Status on Startup ---
 if GROQ_API_KEY:
     print(f"DEBUG: Groq API Key found. Starts with: {GROQ_API_KEY[:4]}... (Length: {len(GROQ_API_KEY)})")
 else:
@@ -75,7 +68,6 @@ def get_groq_client():
         print(f"Error configuring Groq: {e}")
         return None
 
-# --- User Model ---
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
@@ -155,7 +147,6 @@ def predict():
         return render_template('predictor.html', prediction_text="")
     try:
         input_data = [float(x) for x in request.form.values()]
-        # We only take the first 13 inputs in case extra data was sent
         if len(input_data) < 13: 
              pass 
 
@@ -181,14 +172,12 @@ def predict():
         flash(f'Error: {e}', 'danger')
         return render_template('predictor.html', prediction_text="")
 
-# --- Chatbot API Route (GROQ VERSION) ---
 @app.route('/chat', methods=['POST'])
 @login_required
 def chat():
     client = get_groq_client()
     
     if not client:
-        # Check if they forgot to set the new key
         return jsonify({'response': "System offline: GROQ_API_KEY is missing."})
 
     user_message = request.json.get('message')
@@ -202,18 +191,16 @@ def chat():
     """
     
     try:
-        # Create completion with Llama 3.3 (Updated Model)
         chat_completion = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
             ],
-            model="llama-3.3-70b-versatile", # UPDATED: The previous model was decommissioned
+            model="llama-3.3-70b-versatile",
             temperature=0.5,
             max_tokens=300,
         )
         
-        # Extract response
         ai_response = chat_completion.choices[0].message.content
         return jsonify({'response': ai_response})
         
