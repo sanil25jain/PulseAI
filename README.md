@@ -2,13 +2,19 @@
 
 **PulseAI** is an intelligent web application designed to predict the likelihood of heart disease based on clinical parameters using Machine Learning. It also features an integrated AI Chatbot to assist users with medical queries and heart health advice.
 
-[**View Live Demo**](https://pulseai-app.onrender.com) ---
+---
+
+## 🚀 Live Demo
+
+[**Click here to view the Live Application**](https://pulseai-app.onrender.com)
+
+---
 
 ## ✨ Key Functionalities
 
 ### 1. Heart Disease Prediction
 * **Input:** Accepts 13 standard clinical features (Age, Sex, Chest Pain Type, BP, Cholesterol, ECG, etc.).
-* **Algorithm:** Utilizes a trained **Logistic Regression** model (`lr.pkl`) scaled with **StandardScaler** (`sc.pkl`) to analyze user data.
+* **Algorithm:** Utilizes a trained Logistic Regression model (`lr.pkl`) scaled with StandardScaler (`sc.pkl`) to analyze user data.
 * **Output:** Provides an immediate diagnosis (Presence or Absence of Heart Disease) with visual indicators.
 
 ### 2. AI Medical Assistant (Chatbot)
@@ -19,11 +25,11 @@
 
 ### 3. User System
 * **Authentication:** Secure Login and Registration system.
-* **Security:** Password hashing using **Werkzeug** and session management via **Flask-Login**.
+* **Security:** Password hashing using Werkzeug and session management via Flask-Login.
 * **Database:** Securely stores user credentials and history.
 
 ### 4. Responsive UI
-* **Design:** Modern, clean interface built with **Tailwind CSS**.
+* **Design:** Modern, clean interface built with Tailwind CSS.
 * **Structure:** Vertical, card-based layout optimized for easy data entry on both mobile and desktop devices.
 
 ---
